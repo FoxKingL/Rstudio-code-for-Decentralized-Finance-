@@ -1,0 +1,277 @@
+---
+title: "DeFi Assignment 4 Part 2:"
+subtitle: "Assignment 4 Part 2(Fall 2024)"
+author: "Haolin Luo"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+  pdf_document: 
+    latex_engine: xelatex
+---
+```{r setup, include=FALSE}
+
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section  install packages if they are not already installed. 
+# This block will not be shown in the knit file.
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({r <- getOption("repos")
+       r["CRAN"] <- "http://cran.r-project.org" 
+       options(repos=r)
+})
+
+# Required packages for M20 LIBS analysis
+if (!require("rmarkdown")) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require("stringr")) {
+  install.packages("stringr")
+  library(stringr)
+}
+
+if (!require("ggbiplot")) {
+  install.packages("ggbiplot")
+  library(ggbiplot)
+}
+
+if (!require("pheatmap")) {
+  install.packages("pheatmap")
+  library(pheatmap)
+}
+if(!require("randomForest")) {
+  install.packages("randomForest")
+  library(randomForest)
+}
+if(!require("caret")) {
+  install.packages("caret")
+  library(caret)
+}
+if(!require("survival")){
+  install.packages("survival")
+  library(survival)
+}
+if(!require("survminer")){
+  install.packages("survminer")
+  library(survminer)
+}
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+
+if(!require("kableExtra")){
+  install.packages("kableExtra")
+  library(kableExtra)
+}
+if(!require("rpart")){
+  install.packages("rpart")
+  library(rpart)
+}
+
+```
+
+```{r}
+# Load a single survival dataset with a specific index and outcome event:
+indexEvent = "Borrow/"
+outcomeEvent = "Account Liquidated/"
+
+my_survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+# Rescale the timeDiff column to be in Days instead of Seconds
+my_survivalData <- my_survivalData %>%
+  mutate(timeDiff = timeDiff / 86400)
+
+# Create a Surv object with our survival data:
+my_survObj <- Surv(time = my_survivalData$timeDiff, event = my_survivalData$status)
+
+# Fit a KM curve to this data:
+my_survFit <- surv_fit(my_survObj ~ 1, data = my_survivalData)
+
+my_survivalData <- my_survivalData %>%
+  filter(!(timeDiff <= 1 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+
+my_survivalDataForClassification <- my_survivalData %>%
+  mutate(event = case_when(timeDiff <= 1 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 1 ~ "no"))  # otherwise set event = "no"
+# Plot the Kaplan--Meier curve:
+my_kmPlot <- ggsurvplot(my_survFit,
+             censor = FALSE,
+             title = "How much percent of users is liquidated after borrowing money?",
+             xlab = "Time (days)",
+             break.x.by = 100,
+             ylab = "Probability of Get liquidated",
+             conf.int = TRUE)
+
+my_kmPlot
+
+
+# We need to be careful with the features we include. Some of the features present in 
+# the data are not meant for performing tasks like classification, like the outcomeTime 
+# which is NA for any censored events. Let's drop these features:
+
+featuresToDrop = c("indexTime",   # This feature is primarily present for data exploration 
+                                  # and investigation, but could interfere with a 
+                                  # proper experiment
+                   "outcomeTime", # This features is NA whenever an event is right-censored, 
+                                  # which is often.
+                   "id",          # This represents the transaction ID of the index event, 
+                                  # which is useful for further investigation but not for 
+                                  # an experiment
+                   "Index Event", # For the sake of this exercise, the index event and outcome 
+                                  # event should be the same for every row
+                   "Outcome Event",
+                   "timeDiff",    # event is based on timeDiff, which is what we're trying to 
+                                  # predict for this classification problem
+                   "deployment",  # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "version",     # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "indexID",     # this is only useful for looking up more details about a 
+                                  # single transaction
+                   "user",        # the user *could* be useful, but it's difficult to effectively 
+                                  # use since its a factor with tons of levels
+                   "status",      # this is sort of wrapped up in the "event" column we are trying
+                                  # to predict
+                   "quarter", 
+                   
+                   "liquidator"             
+                   ) 
+
+my_survivalDataForClassification <- my_survivalDataForClassification %>%
+  select(-any_of(featuresToDrop)) %>% # Drop an entire list of named features
+  drop_na()
+
+# We also should convert relevant columns to factors:
+my_survivalDataForClassification[] <- lapply(my_survivalDataForClassification, 
+                                          function(x) if(is.character(x)) as.factor(x) else x)
+
+
+# Compute the percentage of events in "yes" and "no"
+pctPerEvent <- my_survivalDataForClassification %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+kable(pctPerEvent) # View these percentages
+```
+
+
+```{r}
+cleaned_data <- na.omit(my_survivalDataForClassification)
+# Split data into training and test datasets
+set.seed(123) # For reproducibility
+# Ensure event column is a factor with exactly two levels
+cleaned_data$event <- factor(cleaned_data$event, levels = c("yes", "no"))
+
+# # Now, try creating the partition again
+# set.seed(123)
+# trainIndex3 <- createDataPartition(cleaned_data$event, p = 0.8, list = FALSE)
+#convert some int data into factors
+cleaned_data$amountUSDQuartile <- as.factor(cleaned_data$amountUSDQuartile)
+cleaned_data$principalAmountUSDQuartile <- as.factor(cleaned_data$principalAmountUSDQuartile)
+cleaned_data$amountNativeQuartile <- as.factor(cleaned_data$amountNativeQuartile)
+cleaned_data$collateralAmountUSDQuartile <- as.factor(cleaned_data$collateralAmountUSDQuartile)
+cleaned_data$event <- as.factor(cleaned_data$event)
+
+
+my_testData3 <- cleaned_data
+my_test_label3 <- my_testData3$event
+my_testData3 <- my_testData3 %>%
+  select(-c(event))
+```
+
+```{r}
+#predict the original dataset based on the model that we get from oversample and undersample
+svm_model_oversample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_svm_model.rds")
+svm_model_undersample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_svm_model.rds")
+ada_model_oversample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_ada_model.rds")
+ada_model_undersample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_ada_model.rds")
+nb_model_oversample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_nb_model.rds")
+nb_model_undersample <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_nb_model.rds")
+```
+
+```{r}
+#Naive Bayes
+preds_nb_oversample <- predict(nb_model_oversample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_nb_oversample <- factor(preds_nb_oversample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_nb_oversample <- confusionMatrix(preds_nb_oversample, my_test_label3_oversample)
+print(confusion_nb_oversample)
+saveRDS(confusion_nb_oversample, file = "Oversample_Borrow_Liquidated_confusion_nb_Update.rds")
+preds_nb_oversample <- predict(nb_model_undersample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_nb_oversample <- factor(preds_nb_oversample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_nb_undersample <- confusionMatrix(preds_nb_oversample, my_test_label3_oversample)
+print(confusion_nb_undersample)
+saveRDS(confusion_nb_oversample, file = "Undersample_Borrow_Liquidated_confusion_nb_Update.rds")
+```
+
+```{r}
+#Naive Bayes
+preds_svm_oversample <- predict(nb_model_oversample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_svm_oversample <- factor(preds_svm_oversample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_svm_oversample <- confusionMatrix(preds_svm_oversample, my_test_label3_oversample)
+print(confusion_svm_oversample)
+saveRDS(confusion_svm_oversample, file = "Oversample_Borrow_Liquidated_confusion_svm_Update.rds")
+preds_svm_undersample <- predict(svm_model_undersample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_svm_undersample <- factor(preds_svm_undersample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_svm_undersample <- confusionMatrix(preds_svm_undersample, my_test_label3_oversample)
+print(confusion_svm_undersample)
+saveRDS(confusion_svm_undersample, file = "Undersample_Borrow_Liquidated_confusion_svm_Update.rds")
+```
+
+```{r}
+# Naive Bayes 
+preds_ada_oversample <- predict(ada_model_oversample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_ada_oversample <- factor(preds_ada_oversample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_ada_oversample <- confusionMatrix(preds_ada_oversample, my_test_label3_oversample)
+print(confusion_ada_oversample)
+saveRDS(confusion_ada_oversample, file = "Oversample_Borrow_Liquidated_confusion_ada_Update.rds")
+preds_ada_undersample <- predict(ada_model_undersample, my_testData3_oversample)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_ada_undersample <- factor(preds_ada_undersample, levels = c("yes", "no"))
+my_test_label3_oversample <- factor(my_test_label3_oversample, levels = c("yes", "no"))
+
+# Evaluate the model using confusion matrix
+confusion_ada_undersample <- confusionMatrix(preds_ada_undersample, my_test_label3_oversample)
+print(confusion_ada_undersample)
+saveRDS(confusion_ada_undersample, file = "Undersample_Borrow_Liquidated_confusion_ada_Update.rds")
+```

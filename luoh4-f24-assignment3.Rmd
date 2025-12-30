@@ -1,0 +1,1152 @@
+---
+title: "DeFi Assignment 3:"
+subtitle: "Assignment 3 (Fall 2024)"
+author: "Haolin Luo"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+---
+```{r setup, include=FALSE}
+
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section  install packages if they are not already installed. 
+# This block will not be shown in the knit file.
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({r <- getOption("repos")
+       r["CRAN"] <- "http://cran.r-project.org" 
+       options(repos=r)
+})
+
+# Required packages for M20 LIBS analysis
+if (!require("rmarkdown")) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require("stringr")) {
+  install.packages("stringr")
+  library(stringr)
+}
+
+if (!require("ggbiplot")) {
+  install.packages("ggbiplot")
+  library(ggbiplot)
+}
+
+if (!require("pheatmap")) {
+  install.packages("pheatmap")
+  library(pheatmap)
+}
+if(!require("randomForest")) {
+  install.packages("randomForest")
+  library(randomForest)
+}
+if(!require("caret")) {
+  install.packages("caret")
+  library(caret)
+}
+if(!require("survival")){
+  install.packages("survival")
+  library(survival)
+}
+if(!require("survminer")){
+  install.packages("survminer")
+  library(survminer)
+}
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+
+if(!require("kableExtra")){
+  install.packages("kableExtra")
+  library(kableExtra)
+}
+if(!require("rpart")){
+  install.packages("rpart")
+  library(rpart)
+}
+
+```
+
+# DAR ASSIGNMENT 3: DeFi Survival Benchmarking and Large Transaction Models (LTM) Research Overview
+
+
+To get going on the DeFi Survival Benchmark, lets think about the questions that Aaron gave us. 
+
+### Survival Benchmark Paper:
+
+1. Can we develop experiments for benchmarking survival and classification methods on our novel DeFi survival dataset?
+
+2. Can we improve the results of these methods by engineering smarter features?
+
+3. Can we finish the benchmark paper by the end of the semester to submit to DMLR?
+
+4. How can we best leverage LLM to solve survival benchmark?
+
+### Large Transaction Models (LTM):
+
+5. How would we design an LTM that leverages large language models to solve many different  complex finance-related tasks?
+
+6. Do we need to pre-train or fine-tune LTM or can we solve the problem with prompt engineering? 
+
+7. Should we use code-generation to retrieve relevant transaction data to solve tasks? 
+
+8. Can we develop a benchmark to demonstrate LTM capabilities and measure improvements in performance?
+
+For this notebook, we are going to focus on a version of question 1: _How can we develop experiments for benchmarking classification methods on our novel DeFi survival dataset? The basic idea is that we are going to convert the data set up for predicting survival to into classification problems._
+
+# DAR ASSIGNMENT 3 (Introduction): Introductory DAR Notebook
+
+This notebook is broken into two main parts:
+
+* **Part 1:** Preparing your local repo for **DAR Assignment 3**
+* **Part 2:** Loading the DeFi Datasets
+   * Data: 
+   * Results:
+
+* **Part 3:** Individual analysis of your team's dataset
+
+**NOTE:** The RPI github repository for all the code and data required for this notebook may be found at:
+
+* https://github.rpi.edu/DataINCITE/DAR-DeFi-LTM-F24
+
+* **Part 4:** Preparation of Team Presentation 
+
+# DAR ASSIGNMENT 3 (Part 1): Preparing your local repo for Assignment 3 
+
+In this assignment you'll start by making a copy of the Assignment 3 template notebook, then you'll add to your copy with your original work. The instructions which follow explain how to accomplish this. 
+
+## Cloning the `DAR-DeFi-LTM-F24` repository
+
+* Access RStudio Server on the IDEA Cluster at http://lp01.idea.rpi.edu/rstudio-ose/
+    * REMINDER: You must be on the RPI VPN if off campus!!
+* Access the Linux shell on the IDEA Cluster by clicking the **Terminal** tab of RStudio Server (lower left panel). 
+    * You now see the Linux shell on the IDEA Cluster
+    * `cd` (change directory) to enter your home directory using: `cd ~`
+    * Type `pwd` to confirm
+    * NOTE: Advanced users may use `ssh` to directly access the Linux shell from a macOS or Linux command line
+* Type `git clone https://github.rpi.edu/DataINCITE/DAR-DeFi-LTM-F24` from within your `home` directory
+    * Enter your RCS ID and your saved personal access token when asked
+    * This will create a new directory `DAR-DeFi-LTM-F24`
+* In the Linux shell, `cd` to `DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03`
+    * Type `ls -al` to list the current contents
+    * Don't be surprised if you see many files!
+* In the Linux shell, type `git checkout -b dar-yourrcs` where `yourrcs` is your RCS id
+    * For example, if your RCS is `erickj4`, your new branch should be `dar-erickj4`
+    * It is _critical_ that you include your RCS id in your branch id!
+* Back in the RStudio Server UI, navigate to the `DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03` directory via the **Files** panel (lower right panel)
+    * Under the **More** menu, set this to be your R working directory
+    * Setting the correct working directory is essential for interactive R use!
+
+You're now ready to start coding Assignment 3!
+
+## Creating your copy of the Assignment 3 notebook
+
+1. In RStudio, make a **copy** of `dar-f24-assignment3-template.Rmd` file using a *new, original, descriptive* filename that **includes your RCS ID!**
+    * Open `dar-f24-assignment3-template.Rmd`
+    * **Save As...** using a new filename that includes your RCS ID
+    * Example filename for user `erickj4`: `erickj4-assignment3-f24.Rmd`
+    * POINTS OFF IF:
+       * You don't create a new filename!
+       * You don't include your RCS ID!
+       * You include `template` in your new filename!
+2. Edit your new notebook using RStudio and save
+    * Change the `title:` and `subtitle:` headers (at the top of the file)
+    * Change the `author:` 
+    * Don't bother changing the `date:`; it should update automagically...
+    * **Save** your changes
+3. Use the RStudio `Knit` command to create an HTML file; repeat as necessary
+    * Use the down arrow next to the word `Knit` and select **Knit to HTML**
+    * You may also knit to PDF...
+4. In the Linux terminal, use `git add` to add each new file you want to add to the repository
+    * Type: `git add yourfilename.Rmd` 
+    * Type: `git add yourfilename.html` (created when you knitted)
+    * Add your PDF if you also created one...
+5. When you're ready, in Linux commit your changes: 
+    * Type: `git commit -m "some comment"` where "some comment" is a useful comment describing your changes
+    * This commits your changes to your local repo, and sets the stage for your next operation.
+6. Finally, push your commits to the RPI github repo
+    * Type: `git push origin dar-yourrcs` (where `dar-yourrcs` is the branch you've been working in)
+    * Your changes are now safely on the RPI github.
+7. **REQUIRED:** On the RPI github, **submit a pull request.**
+    * In a web browser, navigate to https://github.rpi.edu/DataINCITE/DAR-DeFi-LTM-F24
+    * In the branch selector drop-down (by default says **main**), select your branch
+    * **Submit a pull request for your branch**
+    * One of the DAR instructors will merge your branch, and your new files will be added to the master branch of the repo. _Do not merge your branch yourself!_
+
+# DAR ASSIGNMENT 3 (Part 2): Loading the DeFi Survival Datasets
+
+## Load the DeFi Survival Data _Data_
+
+Our survival analysis data is segmented into sub-directories based first on "index event", then the "outcome event." Suppose that we want to load a single survival dataset, and that we are interested in "Borrow" to "Repay" survival analysis. Then we can load this dataset as follows:
+
+```{r}
+# Load a single survival dataset with a specific index and outcome event:
+indexEvent = "Borrow/"
+outcomeEvent = "Repay/"
+
+survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+# Review the structure of our data
+str(survivalData)
+summary(survivalData)
+
+```
+
+`IndexEvent` and `OutcomeEvent` let us know the type of transactions we are looking out.  Each combination has a unique identifier. Notice that the information about the  survival time is `indexTime` (Time of index event), `timeDiff` (time until event or censoring), `outcometime` (time outcome event occured or NA), and `status` (if the event was censored). The rest of the variable describe various attributes of the transactions most of which are gathered at the index event except for a few addition variables that gathered only when a liquidation occurs.  
+
+There are many possible choices for index and outcome events! Explore the sub-directories in `~/DAR-DeFi-LTM-F24/Data/Survival_Data/` to see some of the other options for index and outcome events. You should see that there are four total index events: "Borrow", "Deposit", "Repay", and "Withdraw". Navigating into any of these directories, you should find at least five additional subdirectories representing the possible outcome event choices for that index event. For instance, within the `~/DAR-DeFi-LTM-F24/Data/Survival_Data/Withdraw/` directory there are sub-directories for the outcome events "Account Liquidated", "Borrow", "Deposit", "Liquidation Performed", and "Repay."
+
+Choose another combination of index and outcome events and make sure you can successfully load the data.  Don't forget to include / at the end of the outcome event.  
+
+You will need to un-comment this code to run it. 
+
+```{r}
+#indexEvent = "foobar/" # Edit this line another index event directory name and enter here
+#outcomeEvent = "doobar/" # Edit this line to choose another outcome event directory name and enter it here
+
+#survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+#                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+## Review the structure of the data:
+#str(survivalData2)
+```
+
+Alternatively, there may come a time when you want to load the survival datasets for all possible index and outcome events at once. If this is the case, there is a script called "dataLoader.R" in `~/DAR-DeFi-LTM-F24/DeFi_source/` which can be run to load all the survival data into one large dataframe. Note that this can take a couple of minutes to execute, so you don't want to do this unless you need it.  But the advantage is that you can just filter to get any combination of index and outcome events that you like.  
+
+Un-comment this code if you want to give it a try. 
+
+```{r}
+# Load all the survival data into one dataframe called "allSurvivalData":
+ source("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/DeFi_source/dataLoader.R")
+
+```
+
+# Example of a classification benchmark.
+
+We would like to create classification benchmarks based on the same survival data.  The survival problem asks "How long will it take from a borrow (index event) for an account to repay (outcome event)?" A classification problem converts the problem  "After a borrow (index event), will that account have a repay (outcome invent) within 24 hours (time threshold)?" This converts the survival problem into a "yes" and "no" classification problem.  Our benchmark problem is to train classifiers to solve this problem, see how they generalize, and test how well they work.  
+
+For your convenience, we demonstrate one way to do this for borrow to repay.
+
+## Look at Kaplan--Meier Curve to pick a threshold
+
+First we draw the Kaplan--Meier Curve for borrow-to-repay to help us select a reasonable threshold. Looking at this curve for borrow-to-repay, we see that about 25% of borrows are repaid in 1 day or less.  So we decide on this as a threshold.  This analysis using  done in the "survival" package. See for examples on how it works https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html 
+
+```{r}
+
+# Rescale the timeDiff column to be in Days instead of Seconds
+survivalData <- survivalData %>%
+  mutate(timeDiff = timeDiff / 86400)
+
+# Create a Surv object with our survival data:
+survObj <- Surv(time = survivalData$timeDiff, event = survivalData$status)
+
+# Fit a KM curve to this data:
+survFit <- surv_fit(survObj ~ 1, data = survivalData)
+
+
+# Plot the Kaplan--Meier curve:
+kmPlot <- ggsurvplot(survFit,
+             censor = FALSE,
+             title = "How long do users wait to repay after borrowing money?",
+             xlab = "Time (days)",
+             break.x.by = 100,
+             ylab = "Probability of No Repayment",
+             conf.int = TRUE)
+
+kmPlot
+
+# The plot shows a big dip in the first day or so. Let's calculate the probability 
+# that an event lasts longer than one day:
+
+# Here we create a dataframe with the time and surv[ival probability] columns from 
+# the survFit object: 
+
+survStats <- data.frame(survFit$time, survFit$surv) %>% 
+  filter(survFit.time >= 1) %>% # Filter out all events that occurred in less than
+                                # one day
+  slice_min(survFit.time)       # Extract the first event that occurred in more than 
+                                # one day
+
+# See what the probability is that an event survives until after the first day:
+survStats$survFit.surv
+
+# We can plot a dotted line on the KM plot to show exactly where the end of one day 
+# falls on the probability curve:
+
+kmPlot$plot +
+  geom_segment(data = survivalData,
+               aes(x = 1, y = 0, 
+                   xend = 1, yend = survStats$survFit.surv), 
+                   linetype = "dashed") +
+  geom_segment(data = survivalData,
+               aes(x = 0, y = survStats$survFit.surv, 
+                   xend = 1, yend = survStats$survFit.surv), 
+                   linetype = "dashed")
+```
+
+## Create the classification data set
+
+Now we convert the survival dataset into a classification problem based on the time threshold.
+
+The variable `timeDiff` contains the difference between the indexTime and either the outcome event time or censoring. We first filter out all events with `timediff <= 86400` (24 hours in seconds) and `status 0` (status == 0 indicates the event was censored). These are events that were right-censored within the first day so we don't know what happened in that case. For the remaining events, if `timeDiff <= threshold` then `event=yes` since event occurred. Otherwise `event = no`, meaning that the event did not occur during the first 24 hours. _Make sure appropriate things are factors._   
+
+The following code creates the appropriate dataset.   Assigns the label for did the event occur with 24 hours. It also removes variables that are not appropriate for the classification tasks. Then it cleans up the data by converting characters to factors.   Finally, we see the percentage of data in each class.  
+
+```{r}
+# First, we need to drop censored events with less than one day of observation time. We 
+# already rescaled our timeDiff variable to days, so we can use 1 as our threshold:
+
+survivalData <- survivalData %>%
+  filter(!(timeDiff < 1 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+
+survivalDataForClassification <- survivalData %>%
+  mutate(event = case_when(timeDiff <= 1 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 1 ~ "no"))  # otherwise set event = "no"
+
+# We need to be careful with the features we include. Some of the features present in 
+# the data are not meant for performing tasks like classification, like the outcomeTime 
+# which is NA for any censored events. Let's drop these features:
+
+featuresToDrop = c("indexTime",   # This feature is primarily present for data exploration 
+                                  # and investigation, but could interfere with a 
+                                  # proper experiment
+                   "outcomeTime", # This features is NA whenever an event is right-censored, 
+                                  # which is often.
+                   "id",          # This represents the transaction ID of the index event, 
+                                  # which is useful for further investigation but not for 
+                                  # an experiment
+                   "Index Event", # For the sake of this exercise, the index event and outcome 
+                                  # event should be the same for every row
+                   "Outcome Event",
+                   "timeDiff",    # event is based on timeDiff, which is what we're trying to 
+                                  # predict for this classification problem
+                   "deployment",  # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "version",     # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "indexID",     # this is only useful for looking up more details about a 
+                                  # single transaction
+                   "user",        # the user *could* be useful, but it's difficult to effectively 
+                                  # use since its a factor with tons of levels
+                   "status",      # this is sort of wrapped up in the "event" column we are trying
+                                  # to predict
+                   "quarter"      # this can leak some information about the future of the events
+                   ) 
+
+survivalDataForClassification <- survivalDataForClassification %>%
+  select(-any_of(featuresToDrop)) %>% # Drop an entire list of named features
+  drop_na()
+
+# We also should convert relevant columns to factors:
+survivalDataForClassification[] <- lapply(survivalDataForClassification, 
+                                          function(x) if(is.character(x)) as.factor(x) else x)
+
+summary(survivalDataForClassification)
+
+# Compute the percentage of events in "yes" and "no"
+pctPerEvent <- survivalDataForClassification %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+kable(pctPerEvent) # View these percentages
+
+```
+
+
+# Next divide into a training and test set
+
+We randomly divide the data into 80 percent training (trainData) and 20 percent testing (testData).
+```{r}
+# Split data into training and testing sets
+set.seed(123) # For reproducibility
+trainIndex <- createDataPartition(survivalDataForClassification$event, 
+                                  p = 0.8, list = FALSE) # split the data 80/20 (p=0.8) 
+                                                         # so train and test data have an 
+                                                         # equivalent portion of event=yes
+trainData <- survivalDataForClassification[trainIndex, ]
+testData <- survivalDataForClassification[-trainIndex, ]
+```
+
+
+# train classifier and get results and put in results 
+
+We train logistic regression. Get positive class accuracy and negative 1 accuracy, balanced accuracy and accuracy. 
+
+```{r}
+
+# Train the logistic regression model
+lrModel <- glm(event ~ ., data = trainData, family = binomial)
+
+# Predict on the test set
+predictionProbabilities <- predict(lrModel, testData, type = "response")
+
+# Convert probabilities to binary predictions
+predictedClasses <- ifelse(predictionProbabilities > 0.5, "yes", "no")
+
+# Evaluate the model accuracy
+
+# Confusion Matrix
+confMatrix <- table(Predicted = predictedClasses, Actual = testData$event)
+
+# Extract values from confusion matrix
+TN <- confMatrix[1, 1]  # True Negatives
+FP <- confMatrix[1, 2]  # False Positives
+FN <- confMatrix[2, 1]  # False Negatives
+TP <- confMatrix[2, 2]  # True Positives
+
+# Positive Class Accuracy (Specificity): TN / (TN + FP)
+classAccuracy <- TN / (TN + FP)
+
+# Negative 1 Accuracy (Sensitivity/Recall): TP / (TP + FN)
+negative1Accuracy <- TP / (TP + FN)
+
+# Overall Accuracy: (TP + TN) / (TP + TN + FP + FN)
+overallAccuracy <- (TP + TN) / (TP + TN + FP + FN)
+
+# Balanced Accuracy: Average of Sensitivity and Specificity
+balancedAccuracy <- (classAccuracy + negative1Accuracy) / 2
+
+# Print the metrics
+cat("Class Accuracy (Specificity):", classAccuracy, "\n")
+cat("Negative 1 Accuracy (Sensitivity):", negative1Accuracy, "\n")
+cat("Balanced Accuracy:", balancedAccuracy, "\n")
+cat("Overall Accuracy:", overallAccuracy, "\n")
+
+
+accuracy <- sum(predictedClasses == testData$event) / nrow(testData)
+print(paste("Model Accuracy: ", accuracy))
+```
+
+Train a decision tree classifier too. See how it does.  
+```{r}
+# 1. Train a Decision Tree Classifier
+treeModel <- rpart(event ~ ., data = trainData, method = "class")
+
+# 2. Predict on the test set using the decision tree
+treePredictions <- predict(treeModel, testData, type = "class")
+
+# 3. Confusion Matrix for the Decision Tree
+treeConfMatrix <- table(Predicted = treePredictions, Actual = testData$event)
+
+# Extract values from the confusion matrix
+treeTN <- treeConfMatrix[1, 1]  # True Negatives
+treeFP <- treeConfMatrix[1, 2]  # False Positives
+treeFN <- treeConfMatrix[2, 1]  # False Negatives
+treeTP <- treeConfMatrix[2, 2]  # True Positives
+
+# 4. Calculate the four metrics for the Decision Tree
+
+# Class Accuracy (Specificity): TN / (TN + FP)
+treeClassAccuracy <- treeTN / (treeTN + treeFP)
+
+# Negative 1 Accuracy (Sensitivity/Recall): TP / (TP + FN)
+treeNegative1Accuracy <- treeTP / (treeTP + treeFN)
+
+# Overall Accuracy: (TP + TN) / (TP + TN + FP + FN)
+treeOverallAccuracy <- (treeTP + treeTN) / (treeTP + treeTN + treeFP + treeFN)
+
+# Balanced Accuracy: Average of Sensitivity and Specificity
+treeBalancedAccuracy <- (treeClassAccuracy + treeNegative1Accuracy) / 2
+```
+
+Make a table comparing results. 
+```{r}
+# Create a data frame to store both models' accuracies
+accuracy_results <- data.frame(
+  Model = c("Logistic Regression", "Decision Tree"),
+  Class_Accuracy = c(classAccuracy, treeClassAccuracy),
+  Negative_1_Accuracy = c(negative1Accuracy, treeNegative1Accuracy),
+  Balanced_Accuracy = c(balancedAccuracy, treeBalancedAccuracy),
+  Overall_Accuracy = c(overallAccuracy, treeOverallAccuracy)
+)
+
+# Print the accuracy results table
+kable(accuracy_results)
+```
+We see that the decision tree appears to be doing slightly better than logistic regression. 
+
+
+# Basic Analysis of Data (Part 3a)
+
+**For each data set perform the following steps.** Communicate with your teammates. Make sure that you are doing different variations of below analysis so that no team member does the exact same analysis. 
+
+1. _Load one survival dataset and describe the data contained in the data frame:_ How many rows does it have? How many features (columns)? Which features are necessary for survival data? Which features are extra? (3 pts)
+
+```{r}
+#Insert your code here
+
+# Load a single survival dataset with a specific index and outcome event:
+indexEvent = "Borrow/"
+outcomeEvent = "Account Liquidated/"
+
+my_survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+# Review the structure of our data
+str(my_survivalData)
+summary(my_survivalData)
+
+```
+
+
+
+2. _Convert to classifciation problem:_ We want to create a classification problem from this survival data. Look at the Kaplan--Meier curve and pick some reasonable value for timeDiff to use. Show the distribution of the classes you created using the method of your choice. (3 pts)
+
+```{r}
+# Rescale the timeDiff column to be in Days instead of Seconds
+my_survivalData <- my_survivalData %>%
+  mutate(timeDiff = timeDiff / 86400)
+
+# Create a Surv object with our survival data:
+my_survObj <- Surv(time = my_survivalData$timeDiff, event = my_survivalData$status)
+
+# Fit a KM curve to this data:
+my_survFit <- surv_fit(my_survObj ~ 1, data = my_survivalData)
+
+
+# Plot the Kaplan--Meier curve:
+my_kmPlot <- ggsurvplot(my_survFit,
+             censor = FALSE,
+             title = "How much percent of users is liquidated after borrowing money?",
+             xlab = "Time (days)",
+             break.x.by = 100,
+             ylab = "Probability of Get liquidated",
+             conf.int = TRUE)
+
+my_kmPlot
+
+# The plot shows a big dip in the first day or so. Let's calculate the probability 
+# that an event lasts longer than one day:
+
+# Here we create a dataframe with the time and surv[ival probability] columns from 
+# the survFit object: 
+
+# Create a dataframe from the time and survival probabilities
+my_survStats <- data.frame(time = my_survFit$time, surv = my_survFit$surv) %>% 
+  filter(time >= 1) %>%  # Filter out events that occurred in less than one day
+  slice_min(time)        # Extract the first event that occurred after one day
+
+
+# See what the probability is that an event survives until after the first day:
+my_survStats$survFit.surv
+
+# We can plot a dotted line on the KM plot to show exactly where the end of one day 
+# falls on the probability curve:
+
+# my_kmPlot$plot +
+#   geom_segment(data = my_survivalData,
+#                aes(x = 1, y = my_survStats$my_survFit.surv,
+#                    xend = 1, yend = my_survStats$my_survFit.surv),
+#                linetype = "dashed") +
+#   geom_segment(data = my_survivalData,
+#                aes(x = 0, y = my_survStats$my_survFit.surv,
+#                    xend = 1, yend = my_survStats$my_survFit.surv),
+#                linetype = "dashed")
+
+```
+3. _Set up and run a classification experiment with your data and class variable:_ Using the classification method of your choice, set up an class prediction experiment by segmenting the data into a train/test split, clean the data of NA values, and run your experiment. Report the results. Use at least three different classification methods. Discuss your findings (12 pts)
+
+```{r}
+#Insert your code here
+# First, we need to drop censored events with less than one day of observation time. We 
+# already rescaled our timeDiff variable to days, so we can use 1 as our threshold:
+
+my_survivalData <- my_survivalData %>%
+  filter(!(timeDiff <= 3 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+
+my_survivalDataForClassification <- my_survivalData %>%
+  mutate(event = case_when(timeDiff <= 1 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 1 ~ "no"))  # otherwise set event = "no"
+
+# We need to be careful with the features we include. Some of the features present in 
+# the data are not meant for performing tasks like classification, like the outcomeTime 
+# which is NA for any censored events. Let's drop these features:
+
+featuresToDrop = c("indexTime",   # This feature is primarily present for data exploration 
+                                  # and investigation, but could interfere with a 
+                                  # proper experiment
+                   "outcomeTime", # This features is NA whenever an event is right-censored, 
+                                  # which is often.
+                   "id",          # This represents the transaction ID of the index event, 
+                                  # which is useful for further investigation but not for 
+                                  # an experiment
+                   "Index Event", # For the sake of this exercise, the index event and outcome 
+                                  # event should be the same for every row
+                   "Outcome Event",
+                   "timeDiff",    # event is based on timeDiff, which is what we're trying to 
+                                  # predict for this classification problem
+                   "deployment",  # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "version",     # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "indexID",     # this is only useful for looking up more details about a 
+                                  # single transaction
+                   "user",        # the user *could* be useful, but it's difficult to effectively 
+                                  # use since its a factor with tons of levels
+                   "status",      # this is sort of wrapped up in the "event" column we are trying
+                                  # to predict
+                   "quarter", 
+                   
+                   "liquidator"               # this can leak some information about the future of the events
+                   ) 
+
+my_survivalDataForClassification <- my_survivalDataForClassification %>%
+  select(-any_of(featuresToDrop))  # Drop an entire list of named features
+
+
+# We also should convert relevant columns to factors:
+my_survivalDataForClassification[] <- lapply(my_survivalDataForClassification, 
+                                          function(x) if(is.character(x)) as.factor(x) else x)
+
+summary(my_survivalDataForClassification)
+
+# # Compute the percentage of events in "yes" and "no"
+# my_pctPerEvent <- my_survivalDataForClassification %>%
+#   group_by(event) %>%
+#   dplyr::summarize(numPerEvent = n()) %>%
+#   mutate(total = sum(numPerEvent)) %>%
+#   mutate(percentage = numPerEvent / total) %>%
+#   dplyr::select(event, percentage)
+# 
+# kable(my_pctPerEvent) # View these percentages
+# 
+# 
+# #split data into training and test datasets
+# set.seed(123) # For reproducibility
+# trainIndex <- createDataPartition(my_survivalDataForClassification$event, 
+#                                   p = 0.8, list = FALSE) # split the data 80/20 (p=0.8) 
+#                                                          # so train and test data have an 
+#                                                          # equivalent portion of event=yes
+# my_trainData <- my_survivalDataForClassification[trainIndex, ]
+# my_testData <- my_survivalDataForClassification[-trainIndex, ]
+# 
+# #light GBM Model
+# library(lightgbm)
+# X <- my_survivalDataForClassification %>% select(-event)  # Exclude the target variable from features
+# y <- my_survivalDataForClassification$event               # Target variable (classification)
+# # Convert target to numeric if it's a factor
+# y <- as.numeric(as.factor(y)) - 1  # LightGBM expects binary labels as 0 and 1
+# 
+# # Convert the data into matrix format, required by LightGBM
+# my_train_matrix <- as.matrix(my_trainData %>% select(-event))  # Remove target variable
+# my_train_labels <- my_trainData$event
+# 
+# my_test_matrix <- as.matrix(my_testData %>% select(-event))    # Remove target variable
+# my_test_labels <- my_testData$event
+# 
+# # Prepare the dataset for LightGBM
+# dtrain <- lgb.Dataset(data = my_train_matrix, label = my_train_labels)
+# dtest <- lgb.Dataset(data = my_test_matrix, label = my_test_labels)
+# 
+# # Set the parameters for LightGBM
+# params <- list(
+#   objective = "binary",  # Binary classification
+#   boosting_type = "gbdt",  # Gradient Boosting Decision Tree
+#   metric = "binary_logloss",  # Loss function for binary classification
+#   learning_rate = 0.1,  # Learning rate
+#   num_leaves = 31,  # Number of leaves in one tree
+#   max_depth = -1,  # Max depth of the trees
+#   feature_fraction = 0.8,  # Fraction of features used per iteration
+#   bagging_fraction = 0.8,  # Fraction of data used per iteration
+#   bagging_freq = 5  # Perform bagging every 5 iterations
+# )
+# 
+# # Train the LightGBM model
+# lgb_model <- lgb.train(
+#   params = params,
+#   data = dtrain,
+#   nrounds = 100,  # Number of boosting iterations
+#   valids = list(test = dtest),  # Evaluate on test set
+#   verbose = 1
+# )
+# # Predict on the test set (returns probabilities)
+# preds <- predict(lgb_model, my_test_matrix)
+# 
+# # Convert probabilities to binary outcomes
+# predicted_labels <- ifelse(preds > 0.5, 'yes', 'no')
+# 
+# # Evaluate model performance with a confusion matrix
+# confusion_matrix <- confusionMatrix(as.factor(predicted_labels), as.factor(my_test_labels))
+# print(confusion_matrix)
+# 
+# # Calculate accuracy
+# accuracy <- sum(predicted_labels == my_test_labels) / length(my_test_labels)
+# print(paste("Accuracy: ", round(accuracy, 4)))
+# 
+# 
+# 
+# 
+# 
+# # Refill missing values based on their k-means clusters
+# # Step 1: Separate complete cases and incomplete cases
+# complete_cases <- my_survivalDataForClassification[complete.cases(my_survivalDataForClassification), ]
+# incomplete_cases <- my_survivalDataForClassification[!complete.cases(my_survivalDataForClassification), ]
+# 
+# # Convert to data.frame if complete_cases is a data.table
+# complete_cases <- as.data.frame(complete_cases)
+# 
+# # Now you can use the original subsetting approach
+# num_cols <- sapply(complete_cases, is.numeric)  # Logical vector indicating which columns are numeric
+# complete_num <- complete_cases[, num_cols]  # Subset numeric columns
+# 
+# # Normalize the data (optional)
+# preproc <- preProcess(complete_num, method = c("center", "scale"))
+# complete_num_scaled <- predict(preproc, complete_num)
+# 
+# # Determine an appropriate number of clusters (optional)
+# # You can use the elbow method to choose the number of clusters
+# # Step 3: Custom wssplot function to examine clusters and plot the results
+# wssplot <- function(data, nc = 15, seed = 10){
+#   wss <- data.frame(cluster = 1:nc, quality = c(0))
+#   for (i in 1:nc) {
+#     set.seed(seed)
+#     wss[i, 2] <- kmeans(data, centers = i)$tot.withinss
+#   }
+#   ggplot(data = wss, aes(x = cluster, y = quality)) +
+#     geom_line() +
+#     ggtitle("Quality of k-means by Cluster") +
+#     xlab("Number of Clusters") +
+#     ylab("Within-cluster Sum of Squares")
+# }
+# 
+# # Plot the elbow curve using the custom wssplot function
+# wssplot(complete_num_scaled, nc = 15, seed = 2)
+# 
+# 
+# 
+# 
+# # Step 4: Fit K-means clustering model (Assume k = 3 for this example)
+# set.seed(123)
+# k <- 13
+# kmeans_model <- kmeans(complete_num_scaled, centers = k)
+# 
+# # Add cluster labels to the complete cases
+# complete_cases$cluster <- kmeans_model$cluster
+# 
+# # Step 4: Refill missing values in the incomplete cases using cluster means
+# # For each incomplete row, assign the row to the nearest cluster based on the non-missing values
+# incomplete_cases <- as.data.frame(incomplete_cases)
+# incomplete_num <- incomplete_cases[, num_cols]
+# 
+# # Normalize the incomplete data using the same preprocessing
+# incomplete_num_scaled <- predict(preproc, incomplete_num)
+# 
+# # Function to assign each incomplete case to the nearest cluster based on available data
+# assign_to_cluster <- function(row, cluster_centers) {
+#   available <- !is.na(row)
+#   row <- row[available]
+#   cluster_centers <- cluster_centers[, available, drop = FALSE]
+#   distances <- apply(cluster_centers, 1, function(center) sum((center - row)^2))
+#   return(which.min(distances))
+# }
+# 
+# # Loop over each incomplete row and assign it to the nearest cluster
+# for (i in 1:nrow(incomplete_num_scaled)) {
+#   row <- incomplete_num_scaled[i, ]
+#   cluster <- assign_to_cluster(row, kmeans_model$centers)
+#   
+#   # Refill the missing values with the cluster mean
+#   for (col in which(is.na(incomplete_num[i, ]))) {
+#     incomplete_num[i, col] <- mean(complete_num[complete_cases$cluster == cluster, col], na.rm = TRUE)
+#   }
+# }
+# 
+# # Combine the complete and refilled incomplete datasets back together
+# incomplete_cases[, num_cols] <- incomplete_num
+# final_data <- bind_rows(complete_cases, incomplete_cases)
+# 
+# # Final dataset with missing values refilled based on clusters
+# print(final_data)
+# 
+# #re-run the data based on new datasets
+# # Split data into training and test datasets
+# set.seed(123) # For reproducibility
+# trainIndex2 <- createDataPartition(final_data$event, 
+#                                   p = 0.8, list = FALSE) # Split the data 80/20 (p=0.8) 
+#                                                          # so train and test data have an 
+#                                                          # equivalent portion of event=yes
+# my_trainData2 <- final_data[trainIndex2, ]
+# my_testData2 <- final_data[-trainIndex2, ]
+# 
+# # Light GBM Model
+# X2 <- final_data %>% select(-event)  # Exclude the target variable from features
+# y2 <- final_data$event               # Target variable (classification)
+# # Convert target to numeric if it's a factor
+# y2 <- as.numeric(as.factor(y)) - 1  # LightGBM expects binary labels as 0 and 1
+# 
+# # Convert the data into matrix format, required by LightGBM
+# my_train_matrix2 <- as.matrix(my_trainData2 %>% select(-event))  # Remove target variable
+# my_train_labels2 <- my_trainData2$event
+# 
+# my_test_matrix2 <- as.matrix(my_testData2 %>% select(-event))    # Remove target variable
+# my_test_labels2 <- my_testData2$event
+# 
+# # Prepare the dataset for LightGBM
+# dtrain2 <- lgb.Dataset(data = my_train_matrix2, label = my_train_labels2)
+# dtest2 <- lgb.Dataset(data = my_test_matrix2, label = my_test_labels2)
+# 
+# # Set the parameters for LightGBM
+# params <- list(
+#   objective = "binary",  # Binary classification
+#   boosting_type = "gbdt",  # Gradient Boosting Decision Tree
+#   metric = "binary_logloss",  # Loss function for binary classification
+#   learning_rate = 0.1,  # Learning rate
+#   num_leaves = 31,  # Number of leaves in one tree
+#   max_depth = -1,  # Max depth of the trees
+#   feature_fraction = 0.8,  # Fraction of features used per iteration
+#   bagging_fraction = 0.8,  # Fraction of data used per iteration
+#   bagging_freq = 5  # Perform bagging every 5 iterations
+# )
+# 
+# # Train the LightGBM model
+# lgb_model2 <- lgb.train(
+#   params = params,
+#   data = dtrain2,
+#   nrounds = 100,  # Number of boosting iterations
+#   valids = list(test = dtest2),  # Evaluate on test set
+#   verbose = 1
+# )
+# 
+# # Predict on the test set (returns probabilities)
+# preds2 <- predict(lgb_model2, my_test_matrix2)
+# 
+# # Convert probabilities to binary outcomes
+# predicted_labels2 <- ifelse(preds2 > 0.5, 'yes', 'no')
+# 
+# # Evaluate model performance with a confusion matrix
+# confusion_matrix2 <- confusionMatrix(as.factor(predicted_labels2), as.factor(my_test_labels2))
+# print(confusion_matrix2)
+# 
+# # Calculate accuracy
+# accuracy <- sum(predicted_labels2 == my_test_labels2) / length(my_test_labels2)
+# print(paste("Accuracy: ", round(accuracy, 4)))
+
+
+
+
+
+
+#clean the data
+cleaned_data <- na.omit(my_survivalDataForClassification)
+# Compute the percentage of events in "yes" and "no"
+my_pctPerEvent <- cleaned_data %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+kable(my_pctPerEvent) # View these percentages
+
+# Split data into training and test datasets
+cleaned_data$event <- as.numeric(as.factor(cleaned_data$event)) - 1
+set.seed(123) # For reproducibility
+trainIndex3 <- createDataPartition(cleaned_data$event,
+                                  p = 0.8, list = FALSE) # Split the data 80/20 (p=0.8)
+                                                         # so train and test data have an
+                                                         # equivalent portion of event=yes
+#convert some int data into factors
+cleaned_data$amountUSDQuartile <- as.factor(cleaned_data$amountUSDQuartile)
+cleaned_data$principalAmountUSDQuartile <- as.factor(cleaned_data$principalAmountUSDQuartile)
+cleaned_data$amountNativeQuartile <- as.factor(cleaned_data$amountNativeQuartile)
+cleaned_data$collateralAmountUSDQuartile <- as.factor(cleaned_data$collateralAmountUSDQuartile)
+
+my_trainData3 <- cleaned_data[trainIndex3, ]
+my_testData3 <- cleaned_data[-trainIndex3, ]
+my_test_label3 <- my_testData3$event
+my_testData3 <- my_testData3 %>%
+  select(-c(event))
+# 
+# # Light GBM Model
+# library(lightgbm)
+# X3 <- cleaned_data %>% select(-event)  # Exclude the target variable from features
+# y3 <- cleaned_data$event               # Target variable (classification)
+# 
+# # Convert target to numeric if it's a factor
+# y3 <- as.numeric(as.factor(y)) - 1  # LightGBM expects binary labels as 0 and 1
+# 
+# # Convert the data into matrix format, required by LightGBM
+# my_train_matrix3 <- as.matrix(my_trainData3 %>% select(-event))  # Remove target variable
+# my_train_labels3 <- my_trainData3$event
+# 
+# my_test_matrix3 <- as.matrix(my_testData3 %>% select(-event))    # Remove target variable
+# my_test_labels3 <- my_testData3$event
+# 
+# # Prepare the dataset for LightGBM
+# dtrain3 <- lgb.Dataset(data = my_train_matrix3, label = my_train_labels3)
+# dtest3 <- lgb.Dataset(data = my_test_matrix3, label = my_test_labels3)
+# 
+# # Set the parameters for LightGBM
+# params <- list(
+#   objective = "binary",  # Binary classification
+#   boosting_type = "gbdt",  # Gradient Boosting Decision Tree
+#   metric = "binary_logloss",  # Loss function for binary classification
+#   learning_rate = 0.1,  # Learning rate
+#   num_leaves = 31,  # Number of leaves in one tree
+#   max_depth = -1,  # Max depth of the trees
+#   feature_fraction = 0.8,  # Fraction of features used per iteration
+#   bagging_fraction = 0.8,  # Fraction of data used per iteration
+#   bagging_freq = 5  # Perform bagging every 5 iterations
+# )
+# 
+# # Train the LightGBM model
+# lgb_model <- lgb.train(
+#   params = params,
+#   data = dtrain3,
+#   nrounds = 100,  # Number of boosting iterations
+#   valids = list(test = dtest3),  # Evaluate on test set
+#   verbose = 1
+# )
+# 
+# # Predict on the test set (returns probabilities)
+# preds3 <- predict(lgb_model, my_test_matrix3)
+# 
+# # Convert probabilities to binary outcomes
+# predicted_labels3 <- ifelse(preds > 0.5, 'yes', 'no')
+# 
+# # Evaluate model performance with a confusion matrix
+# confusion_matrix <- confusionMatrix(as.factor(predicted_labels3), as.factor(my_test_labels3))
+# print(confusion_matrix)
+# 
+# # Calculate accuracy
+# accuracy <- sum(predicted_labels == my_test_labels) / length(my_test_labels)
+# print(paste("Accuracy: ", round(accuracy, 4)))
+
+#gbm model
+
+library(gbm)
+# Convert target variable in cleaned_data to numeric
+cleaned_data$event <- as.numeric(as.factor(cleaned_data$event)) - 1
+
+# Train the GBM model
+gbm_model <- gbm(event ~ ., data = my_trainData3, 
+                 distribution = "bernoulli", 
+                 n.trees = 100, 
+                 interaction.depth = 3)
+
+# Make predictions on the test data
+preds_gbm <- predict(gbm_model, newdata = my_testData3, n.trees = 100, type = "response")
+
+# Convert probabilities to binary outcomes
+predicted_labels_gbm <- ifelse(preds_gbm > 0.5, 'yes', 'no')
+
+# Ensure both predicted and actual labels are factors with the same levels
+predicted_labels_gbm <- factor(predicted_labels_gbm, levels = c("yes", "no"))
+actual_labels <- factor(ifelse(my_testData3$event == 1, "yes", "no"), levels = c("yes", "no"))
+
+# Evaluate model performance with a confusion matrix
+confusion_gbm <- confusionMatrix(predicted_labels_gbm, actual_labels)
+print(confusion_gbm)
+summary(gbm_model)
+
+#second method
+library(e1071)
+library(caret)
+
+# Train the SVM model
+svm_model <- svm(event ~ ., data = my_trainData3, kernel = "linear")
+
+# Make predictions on the test set
+preds_svm <- predict(svm_model, my_testData3)
+
+# Convert predicted labels and test labels to factors with the same levels
+preds_svm <- factor(preds_svm, levels = c("yes", "no"))
+my_test_label3 <- factor(my_test_label3, levels = c("yes", "no"))
+
+# Evaluate model performance with a confusion matrix
+confusion_svm <- confusionMatrix(preds_svm, my_test_label3)
+print(confusion_svm)
+
+#Second method
+library(ada)
+library(caret)
+
+# Train the AdaBoost model
+ada_model <- ada(event ~ ., data = my_trainData3, iter = 50)
+
+# Make predictions on the test set
+preds_ada <- predict(ada_model, my_testData3)
+
+# Ensure both predicted and actual labels are factors with the same levels
+preds_ada <- factor(preds_ada, levels = c("yes", "no"))
+my_test_label3 <- factor(my_test_label3, levels = c("yes", "no"))
+
+# Evaluate model performance with a confusion matrix
+confusion_ada <- confusionMatrix(preds_ada, my_test_label3)
+print(confusion_ada)
+varplot(ada_model, type = "scores")
+
+
+```
+
+# Creative Analysis 
+
+You job is to do a more indepth analysis of potential issues with the classification benchmark. 
+Each member of your team can focus on a different question or model. You can use any analyses or visualizations in R that you like,  
+
+Here are ideas for questions but feel free to make up your own. Try to make up and answer at least two questions.  The additional questions can be a follow-up to previous questions.   Coordinate with your team so you look at different questions. Here are some ideas for questions to inspire you. 
+  
+1) Which  features are most predictive of the event occurring for the problem you considered? 
+
+2) Can you think of features that could be derived from the transaction data to improve the classification results? 
+
+3) How does changing the time threshold impact the classification results? 
+
+4) How should you pick the time threshold?   If
+
+4)  Are some combinations of outcomes and events harder to classifier than others?
+
+5) Can you write a set of  functions to automatically create classification problems from survival problems? 
+
+6) Draw the  Kaplan-Meyer survival curves for the test set grouped by the classifier prediction of yes and no.   How  big the differences are?  This is  another way to see the quality of your classification function.  
+
+7) Are differences you observe statistically significant? 
+
+ 
+
+
+## Analysis: Question 1 (Provide short name)
+
+### Question being asked 
+
+_Provide in natural language a statement of what question you're trying to answer_
+
+### Data Preparation
+
+_Provide in natural language a description of the data you are using for this analysis_
+
+_Include a step-by-step description of how you prepare your data for analysis_
+
+_If you're re-using dataframes prepared in another section, simply re-state what data you're using_
+
+```{r, result01_data}
+# Include all data processing code (if necessary), clearly commented
+
+```
+
+### Analysis: Methods and results
+
+_Describe in natural language a statement of the analysis you're trying to do_
+
+_Provide clearly commented analysis code; include code for tables and figures!_
+
+```{r, result01_analysis}
+# Include all analysis code, clearly commented
+# If not possible, screen shots are acceptable. 
+# If your contributions included things that are not done in an R-notebook, 
+#   (e.g. researching, writing, and coding in Python), you still need to do 
+#   this status notebook in R.  Describe what you did here and put any products 
+#   that you created in github. If you are writing online documents (e.g. overleaf 
+#   or google docs), you can include links to the documents in this notebook 
+#   instead of actual text.
+
+```
+
+### Discussion of results
+
+_Provide in natural language a clear discussion of your observations._
+
+
+## Analysis: Question 2 (Provide short name)
+
+### Question being asked 
+
+_Provide in natural language a statement of what question you're trying to answer_
+
+### Data Preparation
+
+_Provide in natural language a description of the data you are using for this analysis_
+
+_Include a step-by-step description of how you prepare your data for analysis_
+
+_If you're re-using dataframes prepared in another section, simply re-state what data you're using_
+
+```{r, result02_data}
+# Include all data processing code (if necessary), clearly commented
+
+```
+
+### Analysis: Methods and Results  
+
+_Describe in natural language a statement of the analysis you're trying to do_
+
+_Provide clearly commented analysis code; include code for tables and figures!_
+
+```{r, result02_analysis}
+# Include all analysis code, clearly commented
+# If not possible, screen shots are acceptable. 
+# If your contributions included things that are not done in an R-notebook, 
+#   (e.g. researching, writing, and coding in Python), you still need to do 
+#   this status notebook in R.  Describe what you did here and put any products 
+#   that you created in github (documents, jupytor notebooks, etc). If you are writing online documents (e.g. overleaf 
+#   or google docs), you can include links to the documents in this notebook 
+#   instead of actual text.
+
+```
+
+### Discussion of results
+
+_Provide in natural language a clear discussion of your observations._
+
+
+
+
+## Summary and next steps
+
+_Provide in natural language a clear summary and your proposed next steps._
+
+
+_Sample code below_ 
+
+
+
+# When you're done: SAVE, COMMIT and PUSH YOUR CHANGES!
+
+When you are satisfied with your edits and your notebook knits successfully, remember to push your changes to the repo using the following steps:
+
+* `git branch`
+   * To double-check that you are in your working branch
+* `git add <your changed files>`
+* `git commit -m "Some useful comments"`
+* `git push origin <your branch name>`
+
+# APPENDIX: Accessing RStudio Server on the IDEA Cluster
+
+The IDEA Cluster provides seven compute nodes (4x 48 cores, 3x 80 cores, 1x storage server)
+
+* The Cluster requires RCS credentials, enabled via registration in class
+    * email John Erickson for problems `erickj4@rpi.edu`
+* RStudio, Jupyter, MATLAB, GPUs (on two nodes); lots of storage and computes
+* Access via RPI physical network or VPN only
+
+# More info about Rstudio on our Cluster  
+
+## RStudio GUI Access:
+
+* Use: 
+   * http://lp01.idea.rpi.edu/rstudio-ose/
+   * http://lp01.idea.rpi.edu/rstudio-ose-3/ 
+   * http://lp01.idea.rpi.edu/rstudio-ose-6/ 
+   * http://lp01.idea.rpi.edu/rstudio-ose-7/ 
+* Linux terminal accessible from within RStudio "Terminal" or via ssh (below)
+

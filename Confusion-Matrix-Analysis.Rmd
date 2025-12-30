@@ -1,0 +1,532 @@
+---
+title: "Confusion Matrix Analysis Assignment 4:"
+subtitle: "Confusion Matrix Analysis Assignment 4 (Fall 2024)"
+author: "Haolin Luo"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+---
+```{r setup, include=FALSE}
+
+# Required R package installation; RUN THIS BLOCK BEFORE ATTEMPTING TO KNIT THIS NOTEBOOK!!!
+# This section  install packages if they are not already installed. 
+# This block will not be shown in the knit file.
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set the default CRAN repository
+local({r <- getOption("repos")
+       r["CRAN"] <- "http://cran.r-project.org" 
+       options(repos=r)
+})
+
+# Required packages for M20 LIBS analysis
+if (!require("rmarkdown")) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require("stringr")) {
+  install.packages("stringr")
+  library(stringr)
+}
+
+if (!require("ggbiplot")) {
+  install.packages("ggbiplot")
+  library(ggbiplot)
+}
+
+if (!require("pheatmap")) {
+  install.packages("pheatmap")
+  library(pheatmap)
+}
+if(!require("randomForest")) {
+  install.packages("randomForest")
+  library(randomForest)
+}
+if(!require("caret")) {
+  install.packages("caret")
+  library(caret)
+}
+if(!require("survival")){
+  install.packages("survival")
+  library(survival)
+}
+if(!require("survminer")){
+  install.packages("survminer")
+  library(survminer)
+}
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+
+if(!require("kableExtra")){
+  install.packages("kableExtra")
+  library(kableExtra)
+}
+if(!require("rpart")){
+  install.packages("rpart")
+  library(rpart)
+}
+
+```
+
+```{r}
+
+# Oversample Borrow Account Liquidated confusion matrices
+Oversample_Borrow_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_nb.rds")
+Oversample_Borrow_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_ada.rds")
+Oversample_Borrow_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_svm.rds")
+
+# Oversample Borrow Liquidation Performed confusion matrices
+Oversample_Borrow_Liquidation_Performed_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidation_Performed_confusion_nb.rds")
+Oversample_Borrow_Liquidation_Performed_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidation_Performed_confusion_ada.rds")
+Oversample_Borrow_Liquidation_Performed_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidation_Performed_confusion_svm.rds")
+
+# Oversample Deposit Account Liquidated confusion matrices
+Oversample_Deposit_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Account_Liquidated_confusion_nb.rds")
+Oversample_Deposit_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Account_Liquidated_confusion_ada.rds")
+Oversample_Deposit_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Account_Liquidated_confusion_svm.rds")
+
+# Oversample Deposit Liquidation Performed confusion matrices
+Oversample_Deposit_Liquidation_Performed_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Liquidation_Performed_confusion_nb.rds")
+Oversample_Deposit_Liquidation_Performed_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Liquidation_Performed_confusion_ada.rds")
+Oversample_Deposit_Liquidation_Performed_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Deposit_Liquidation_Performed_confusion_svm.rds")
+
+# Oversample Repay Account Liquidated confusion matrices
+Oversample_Repay_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Account_Liquidated_confusion_nb.rds")
+Oversample_Repay_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Account_Liquidated_confusion_ada.rds")
+Oversample_Repay_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Account_Liquidated_confusion_svm.rds")
+
+# Oversample Repay Liquidation Performed confusion matrices
+Oversample_Repay_Liquidation_Performed_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Liquidation_Performed_confusion_nb.rds")
+Oversample_Repay_Liquidation_Performed_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Liquidation_Performed_confusion_ada.rds")
+Oversample_Repay_Liquidation_Performed_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Repay_Liquidation_Performed_confusion_svm.rds")
+
+# Oversample Withdraw Account Liquidated confusion matrices
+Oversample_Withdraw_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Withdraw_Account_Liquidated_confusion_nb.rds")
+Oversample_Withdraw_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Withdraw_Account_Liquidated_confusion_ada.rds")
+Oversample_Withdraw_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Withdraw_Account_Liquidated_confusion_svm.rds")
+
+# Reading in each Undersample confusion matrix one by one
+
+# Undersample Borrow Account Liquidated confusion matrices
+Undersample_Borrow_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_nb.rds")
+Undersample_Borrow_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_ada.rds")
+Undersample_Borrow_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_svm.rds")
+
+
+# Undersample Deposit Account Liquidated confusion matrices
+Undersample_Deposit_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Account_Liquidated_confusion_nb.rds")
+Undersample_Deposit_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Account_Liquidated_confusion_ada.rds")
+Undersample_Deposit_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Account_Liquidated_confusion_svm.rds")
+
+# Undersample Deposit Liquidation Performed confusion matrices
+Undersample_Deposit_Liquidation_Performed_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Liquidation_Performed_confusion_nb.rds")
+Undersample_Deposit_Liquidation_Performed_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Liquidation_Performed_confusion_ada.rds")
+Undersample_Deposit_Liquidation_Performed_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Deposit_Liquidation_Performed_confusion_svm.rds")
+
+# Undersample Repay Account Liquidated confusion matrices
+Undersample_Repay_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Account_Liquidated_confusion_nb.rds")
+Undersample_Repay_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Account_Liquidated_confusion_ada.rds")
+Undersample_Repay_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Account_Liquidated_confusion_svm.rds")
+
+# Undersample Repay Liquidation Performed confusion matrices
+Undersample_Repay_Liquidation_Performed_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Liquidation_Performed_confusion_nb.rds")
+Undersample_Repay_Liquidation_Performed_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Liquidation_Performed_confusion_ada.rds")
+Undersample_Repay_Liquidation_Performed_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Repay_Liquidation_Performed_confusion_svm.rds")
+
+# Undersample Withdraw Account Liquidated confusion matrices
+Undersample_Withdraw_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Withdraw_Account_Liquidated_confusion_nb.rds")
+Undersample_Withdraw_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Withdraw_Account_Liquidated_confusion_ada.rds")
+Undersample_Withdraw_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Withdraw_Account_Liquidated_confusion_svm.rds")
+```
+
+```{r}
+
+# Function to extract confusion matrix values from the 'caret' object
+extract_confusion_values <- function(confusion_matrix_object) {
+  # Extract the confusion matrix itself from the 'confusionMatrix' object
+  confusion_matrix <- confusion_matrix_object$table
+  
+  # Return TP, FP, FN, TN values
+  return(c(TP = confusion_matrix["yes", "yes"],
+           FP = confusion_matrix["no", "yes"],
+           FN = confusion_matrix["yes", "no"],
+           TN = confusion_matrix["no", "no"]))
+}
+
+# Example usage with your confusion matrix objects
+confusion_matrix_values <- data.frame()
+
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_nb", extract_confusion_values(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_ada", extract_confusion_values(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_svm", extract_confusion_values(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_nb", extract_confusion_values(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_ada", extract_confusion_values(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+confusion_matrix_values <- rbind(confusion_matrix_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_svm", extract_confusion_values(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+
+# Converting to long format for plotting
+confusion_matrix_long <- reshape2::melt(confusion_matrix_values, id.vars = "Model", variable.name = "Metric", value.name = "Value")
+
+# Plotting the confusion matrix comparison
+ggplot(confusion_matrix_long, aes(x = Model, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Comparison of Confusion Matrices", x = "Models", y = "Value", fill = "Metric") +
+  scale_fill_brewer(palette = "Set1")
+
+```
+
+```{r}
+# Function to extract balanced accuracy from the 'caret' confusion matrix object
+extract_balanced_accuracy <- function(confusion_matrix_object) {
+  # Access the balanced accuracy metric from the confusion matrix object
+  return(confusion_matrix_object$byClass["Balanced Accuracy"])
+}
+
+# Create a data frame to store the balanced accuracy values
+balanced_accuracy_values <- data.frame()
+
+# Adding balanced accuracy for each confusion matrix to the data frame
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+
+# Plotting the balanced accuracy comparison
+ggplot(balanced_accuracy_values, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Models", x = "Models", y = "Balanced Accuracy") +
+  scale_fill_brewer(palette = "Set1") +
+  theme(legend.position = "none")
+
+
+```
+
+```{r}
+# Create a data frame to store the balanced accuracy values
+balanced_accuracy_values <- data.frame()
+
+# Adding balanced accuracy for each Oversample confusion matrix to the data frame
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Liquidation_Performed_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Liquidation_Performed_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Liquidation_Performed_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Liquidation_Performed_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Borrow_Liquidation_Performed_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Liquidation_Performed_confusion_svm)))
+
+# Repeat for Deposit, Repay, and Withdraw models
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Deposit_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Deposit_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Deposit_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Repay_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Repay_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Repay_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Withdraw_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Withdraw_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Oversample_Withdraw_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_svm)))
+
+# Repeat the process for all Undersample confusion matrices
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Deposit_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Deposit_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Deposit_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Repay_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Repay_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Repay_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_svm)))
+
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Withdraw_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_nb)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Withdraw_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_ada)))
+balanced_accuracy_values <- rbind(balanced_accuracy_values, cbind(Model = "Undersample_Withdraw_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_svm)))
+
+# Plotting
+ggplot(balanced_accuracy_values, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Models", x = "Models", y = "Balanced Accuracy") +
+  theme(legend.position = "none")
+
+
+```
+
+```{r}
+library(viridis)
+
+# Function to extract balanced accuracy from the 'caret' confusion matrix object
+extract_balanced_accuracy <- function(confusion_matrix_object) {
+  return(confusion_matrix_object$byClass["Balanced Accuracy"])
+}
+
+# Create data frames to store the balanced accuracy values for each group
+oversample_balanced_accuracy <- data.frame()
+undersample_balanced_accuracy <- data.frame()
+
+# Extracting balanced accuracy for Oversample models
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Deposit_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_nb)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Deposit_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_ada)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Deposit_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Deposit_Account_Liquidated_confusion_svm)))
+
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Repay_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_nb)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Repay_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_ada)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Repay_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Repay_Account_Liquidated_confusion_svm)))
+
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Withdraw_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_nb)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Withdraw_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_ada)))
+oversample_balanced_accuracy <- rbind(oversample_balanced_accuracy, cbind(Model = "Oversample_Withdraw_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Withdraw_Account_Liquidated_confusion_svm)))
+
+# Extracting balanced accuracy for Undersample models
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Borrow_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Borrow_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Borrow_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Deposit_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_nb)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Deposit_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_ada)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Deposit_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Deposit_Account_Liquidated_confusion_svm)))
+
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Repay_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_nb)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Repay_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_ada)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Repay_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Repay_Account_Liquidated_confusion_svm)))
+
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Withdraw_Account_Liquidated_nb", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_nb)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Withdraw_Account_Liquidated_ada", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_ada)))
+undersample_balanced_accuracy <- rbind(undersample_balanced_accuracy, cbind(Model = "Undersample_Withdraw_Account_Liquidated_svm", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Withdraw_Account_Liquidated_confusion_svm)))
+
+# Plotting the balanced accuracy comparison for Oversample models
+ggplot(oversample_balanced_accuracy, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Oversample Models", x = "Models", y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none")
+
+# Plotting the balanced accuracy comparison for Undersample models
+ggplot(undersample_balanced_accuracy, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Undersample Models", x = "Models", y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+Borrow_Account_Liquidated_confusion_nb_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_nb_RMST.rds")
+Borrow_Account_Liquidated_confusion_svm_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_svm_RMST.rds")
+Borrow_Account_Liquidated_confusion_ada_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_ada_RMST.rds")
+
+Repay_Account_Liquidated_confusion_nb_RMST <-
+  readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Repay_Account_Liquidated_confusion_nb_RMST.rds")
+Repay_Account_Liquidated_confusion_svm_RMST <-
+  readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Repay_Account_Liquidated_confusion_svm_RMST.rds")
+Repay_Account_Liquidated_confusion_ada_RMST <-
+  readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Repay_Account_Liquidated_confusion_ada_RMST.rds")
+
+
+library(viridis)
+
+# Function to extract balanced accuracy from the 'caret' confusion matrix object
+extract_balanced_accuracy <- function(confusion_matrix_object) {
+  return(confusion_matrix_object$byClass["Balanced Accuracy"])
+}
+
+# Create data frames to store the balanced accuracy values for Borrow and Repay models
+borrow_balanced_accuracy <- data.frame()
+repay_balanced_accuracy <- data.frame()
+
+# Extracting balanced accuracy for Borrow models
+borrow_balanced_accuracy <- rbind(borrow_balanced_accuracy, cbind(Model = "Borrow_nb", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_nb_RMST)))
+borrow_balanced_accuracy <- rbind(borrow_balanced_accuracy, cbind(Model = "Borrow_svm", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_svm_RMST)))
+borrow_balanced_accuracy <- rbind(borrow_balanced_accuracy, cbind(Model = "Borrow_ada", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_ada_RMST)))
+
+# Extracting balanced accuracy for Repay models
+repay_balanced_accuracy <- rbind(repay_balanced_accuracy, cbind(Model = "Repay_nb", Balanced_Accuracy = extract_balanced_accuracy(Repay_Account_Liquidated_confusion_nb_RMST)))
+repay_balanced_accuracy <- rbind(repay_balanced_accuracy, cbind(Model = "Repay_svm", Balanced_Accuracy = extract_balanced_accuracy(Repay_Account_Liquidated_confusion_svm_RMST)))
+repay_balanced_accuracy <- rbind(repay_balanced_accuracy, cbind(Model = "Repay_ada", Balanced_Accuracy = extract_balanced_accuracy(Repay_Account_Liquidated_confusion_ada_RMST)))
+
+# Plotting the balanced accuracy comparison for Borrow models
+ggplot(borrow_balanced_accuracy, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Borrow Models", x = "Models", y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none")
+
+# Plotting the balanced accuracy comparison for Repay models
+ggplot(repay_balanced_accuracy, aes(x = Model, y = as.numeric(Balanced_Accuracy), fill = Model)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Balanced Accuracy Comparison of Repay Models", x = "Models", y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none")
+
+
+```
+
+```{r}
+#Reading in the RDS files for RMST
+Borrow_Account_Liquidated_confusion_nb_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_nb_RMST.rds")
+Borrow_Account_Liquidated_confusion_svm_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_svm_RMST.rds")
+Borrow_Account_Liquidated_confusion_ada_RMST <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Borrow_Account_Liquidated_confusion_ada_RMST.rds")
+
+# Reading in the RDS files for Oversample models
+Oversample_Borrow_Account_Liquidated_confusion_nb_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidated_confusion_nb_Update.rds")
+Oversample_Borrow_Account_Liquidated_confusion_svm_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidated_confusion_svm_Update.rds")
+Oversample_Borrow_Account_Liquidated_confusion_ada_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Liquidated_confusion_ada_Update.rds")
+
+# Reading in the RDS files for Undersample models
+Undersample_Borrow_Account_Liquidated_confusion_nb_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Liquidated_confusion_nb_Update.rds")
+Undersample_Borrow_Account_Liquidated_confusion_svm_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Liquidated_confusion_svm_Update.rds")
+Undersample_Borrow_Account_Liquidated_confusion_ada_update <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Liquidated_confusion_ada_Update.rds")
+
+# Oversample Borrow Account Liquidated confusion matrices
+Oversample_Borrow_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_nb.rds")
+Oversample_Borrow_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_ada.rds")
+Oversample_Borrow_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Oversample_Borrow_Account_Liquidated_confusion_svm.rds")
+
+# Undersample Borrow Account Liquidated confusion matrices
+Undersample_Borrow_Account_Liquidated_confusion_nb <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_nb.rds")
+Undersample_Borrow_Account_Liquidated_confusion_ada <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_ada.rds")
+Undersample_Borrow_Account_Liquidated_confusion_svm <- readRDS("~/DAR-DeFi-LTM-F24/StudentNotebooks/Assignment03/Undersample_Borrow_Account_Liquidated_confusion_svm.rds")
+
+# Load necessary libraries
+library(ggplot2)
+library(viridis)
+
+# Function to extract balanced accuracy from the 'caret' confusion matrix object
+extract_balanced_accuracy <- function(confusion_matrix_object) {
+  return(confusion_matrix_object$byClass["Balanced Accuracy"])
+}
+
+# Create a data frame to store the balanced accuracy values
+balanced_accuracy_comparison <- data.frame()
+
+# Adding balanced accuracy for Oversample models - "update"
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "nb", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb_update)))
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "svm", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm_update)))
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "ada", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada_update)))
+
+# Adding balanced accuracy for Oversample models - "no update"
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "nb", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "svm", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+balanced_accuracy_comparison <- rbind(balanced_accuracy_comparison, cbind(Model = "ada", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+
+# Convert Balanced_Accuracy to numeric
+balanced_accuracy_comparison$Balanced_Accuracy <- as.numeric(as.character(balanced_accuracy_comparison$Balanced_Accuracy))
+
+# Plotting the balanced accuracy comparison between "update" and "no update"
+ggplot(balanced_accuracy_comparison, aes(x = Model, y = Balanced_Accuracy, fill = Version)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Balanced Accuracy Comparison for Oversample Models", 
+       x = "Model", 
+       y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Load necessary libraries
+library(ggplot2)
+library(viridis)
+
+# Create a data frame to store the balanced accuracy values for undersample models
+undersample_balanced_accuracy_comparison <- data.frame()
+
+# Adding balanced accuracy for Undersample models - "update"
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "nb", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb_update)))
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "svm", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm_update)))
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "ada", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada_update)))
+
+# Adding balanced accuracy for Undersample models - "no update"
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "nb", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "svm", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+undersample_balanced_accuracy_comparison <- rbind(undersample_balanced_accuracy_comparison, cbind(Model = "ada", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+
+# Convert Balanced_Accuracy to numeric
+undersample_balanced_accuracy_comparison$Balanced_Accuracy <- as.numeric(as.character(undersample_balanced_accuracy_comparison$Balanced_Accuracy))
+
+# Plotting the balanced accuracy comparison between "update" and "no update" for undersample models
+ggplot(undersample_balanced_accuracy_comparison, aes(x = Model, y = Balanced_Accuracy, fill = Version)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Balanced Accuracy Comparison for Undersample Models", 
+       x = "Model", 
+       y = "Balanced Accuracy") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# Load necessary libraries
+library(ggplot2)
+library(viridis)
+
+# Function to extract balanced accuracy from the 'caret' confusion matrix object
+extract_balanced_accuracy <- function(confusion_matrix_object) {
+  return(confusion_matrix_object$byClass["Balanced Accuracy"])
+}
+
+# Create a data frame to store the balanced accuracy values for all models
+balanced_accuracy_all <- data.frame()
+
+# Adding balanced accuracy for Oversample models - "update"
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "nb", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb_update)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "svm", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm_update)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "ada", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada_update)))
+
+# Adding balanced accuracy for Oversample models - "no update"
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "nb", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "svm", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_svm)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Oversample", Model = "ada", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Oversample_Borrow_Account_Liquidated_confusion_ada)))
+
+# Adding balanced accuracy for Undersample models - "update"
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "nb", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb_update)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "svm", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm_update)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "ada", Version = "Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada_update)))
+
+# Adding balanced accuracy for Undersample models - "no update"
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "nb", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_nb)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "svm", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_svm)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "Undersample", Model = "ada", Version = "No Update", Balanced_Accuracy = extract_balanced_accuracy(Undersample_Borrow_Account_Liquidated_confusion_ada)))
+
+# Adding balanced accuracy for RMST models
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "RMST", Model = "nb", Version = "N/A", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_nb_RMST)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "RMST", Model = "svm", Version = "N/A", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_svm_RMST)))
+balanced_accuracy_all <- rbind(balanced_accuracy_all, cbind(Sampling = "RMST", Model = "ada", Version = "N/A", Balanced_Accuracy = extract_balanced_accuracy(Borrow_Account_Liquidated_confusion_ada_RMST)))
+# Convert Balanced_Accuracy to numeric
+balanced_accuracy_all$Balanced_Accuracy <- as.numeric(as.character(balanced_accuracy_all$Balanced_Accuracy))
+
+# Plotting the balanced accuracy comparison for all models
+ggplot(balanced_accuracy_all, aes(x = Model, y = Balanced_Accuracy, fill = interaction(Version, Sampling))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Balanced Accuracy Comparison for All Models", 
+       x = "Model", 
+       y = "Balanced Accuracy", 
+       fill = "Version and Sampling") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```

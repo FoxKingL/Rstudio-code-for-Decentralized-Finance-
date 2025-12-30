@@ -1,0 +1,217 @@
+---
+title: "DeFi Assignment 4 Part 3:"
+subtitle: "Assignment 4 Part 3(Fall 2024)"
+author: "Haolin Luo"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    df_print: paged
+  pdf_document: 
+    latex_engine: xelatex
+---
+```{r}
+# Load a single survival dataset with a specific index and outcome event:
+indexEvent = "Borrow/"
+outcomeEvent = "Account Liquidated/"
+
+my_survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+# Rescale the timeDiff column to be in Days instead of Seconds
+my_survivalData <- my_survivalData %>%
+  mutate(timeDiff = timeDiff / 86400)
+
+featuresToDrop = c("indexTime",   # This feature is primarily present for data exploration 
+                                  # and investigation, but could interfere with a 
+                                  # proper experiment
+                   "outcomeTime", # This features is NA whenever an event is right-censored, 
+                                  # which is often.
+                   "id",          # This represents the transaction ID of the index event, 
+                                  # which is useful for further investigation but not for 
+                                  # an experiment
+                   "Index Event", # For the sake of this exercise, the index event and outcome 
+                                  # event should be the same for every row
+                   "Outcome Event",
+                       # event is based on timeDiff, which is what we're trying to 
+                                  # predict for this classification problem
+                   "deployment",  # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "version",     # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "indexID",     # this is only useful for looking up more details about a 
+                                  # single transaction
+                   "user",        # the user *could* be useful, but it's difficult to effectively 
+                                  # use since its a factor with tons of levels
+                        # this is sort of wrapped up in the "event" column we are trying
+                                  # to predict
+                   "quarter", 
+                   
+                   "liquidator"             
+                   ) 
+
+my_survivalData <- my_survivalData %>%
+  select(-any_of(featuresToDrop)) %>% # Drop an entire list of named features
+  drop_na()
+
+my_survivalData_10 <- my_survivalData %>%
+  filter(!(timeDiff >= 9.94 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+my_survivalDataForClassification_10 <- my_survivalData_10 %>%
+  mutate(event = case_when(timeDiff <= 9.94 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 9.94 ~ "no"))  # otherwise set event = "no"
+
+my_survivalData_5 <- my_survivalData %>%
+  filter(!(timeDiff >= 17.43 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+my_survivalDataForClassification_5 <- my_survivalData_5 %>%
+  mutate(event = case_when(timeDiff <= 17.43 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 17.43 ~ "no"))  # otherwise set event = "no"
+
+my_survivalData_1 <- my_survivalData %>%
+  filter(!(timeDiff >= 69.36 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+
+my_survivalDataForClassification_1 <- my_survivalData_1 %>%
+  mutate(event = case_when(timeDiff <= 69.36 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 69.36 ~ "no"))  # otherwise set event = "no"
+
+# We also should convert relevant columns to factors:
+my_survivalDataForClassification[] <- lapply(my_survivalDataForClassification, 
+                                          function(x) if(is.character(x)) as.factor(x) else x)
+
+
+# Compute the percentage of events in "yes" and "no"
+pctPerEvent_1 <- my_survivalDataForClassification_1 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+pctPerEvent_5 <- my_survivalDataForClassification_5 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+pctPerEvent_10 <- my_survivalDataForClassification_10 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+kable(pctPerEvent_1) # View these percentages
+kable(pctPerEvent_5) # View these percentages
+kable(pctPerEvent_10) # View these percentages
+```
+
+```{r}
+# Load a single survival dataset with a specific index and outcome event:
+indexEvent = "Repay/"
+outcomeEvent = "Account Liquidated/"
+
+my_survivalData = read_rds(paste0("/academics/MATP-4910-F24/DAR-DeFi-LTM-F24/Data/Survival_Data/", 
+                               indexEvent, outcomeEvent, "survivalData.rds"))
+
+# Rescale the timeDiff column to be in Days instead of Seconds
+my_survivalData <- my_survivalData %>%
+  mutate(timeDiff = timeDiff / 86400)
+
+featuresToDrop = c("indexTime",   # This feature is primarily present for data exploration 
+                                  # and investigation, but could interfere with a 
+                                  # proper experiment
+                   "outcomeTime", # This features is NA whenever an event is right-censored, 
+                                  # which is often.
+                   "id",          # This represents the transaction ID of the index event, 
+                                  # which is useful for further investigation but not for 
+                                  # an experiment
+                   "Index Event", # For the sake of this exercise, the index event and outcome 
+                                  # event should be the same for every row
+                   "Outcome Event",
+                       # event is based on timeDiff, which is what we're trying to 
+                                  # predict for this classification problem
+                   "deployment",  # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "version",     # this will be the same for all rows within a single 
+                                  # survival dataset
+                   "indexID",     # this is only useful for looking up more details about a 
+                                  # single transaction
+                   "user",        # the user *could* be useful, but it's difficult to effectively 
+                                  # use since its a factor with tons of levels
+                        # this is sort of wrapped up in the "event" column we are trying
+                                  # to predict
+                   "quarter", 
+                   
+                   "liquidator"             
+                   ) 
+
+my_survivalData <- my_survivalData %>%
+  select(-any_of(featuresToDrop)) %>% # Drop an entire list of named features
+  drop_na()
+
+my_survivalData_10 <- my_survivalData %>%
+  filter(!(timeDiff >= 9.90 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+my_survivalDataForClassification_10 <- my_survivalData_10 %>%
+  mutate(event = case_when(timeDiff <= 9.90 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 9.90 ~ "no"))  # otherwise set event = "no"
+
+my_survivalData_5 <- my_survivalData %>%
+  filter(!(timeDiff >= 17.43 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+my_survivalDataForClassification_5 <- my_survivalData_5 %>%
+  mutate(event = case_when(timeDiff <= 17.43 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 17.43 ~ "no"))  # otherwise set event = "no"
+
+my_survivalData_1 <- my_survivalData %>%
+  filter(!(timeDiff >= 72.56 & status == 0)) # filter out censored events with timeDiff less 
+                                        # than one day
+
+my_survivalDataForClassification_1 <- my_survivalData_1 %>%
+  mutate(event = case_when(timeDiff <= 72.56 ~ "yes", # if the timeDiff is below our threshold, 
+                                                  # set event="yes"
+                           timeDiff > 72.56 ~ "no"))  # otherwise set event = "no"
+
+my_survivalDataForClassification <- my_survivalDataForClassification %>% # Drop an entire list of named features
+  drop_na()
+
+# We also should convert relevant columns to factors:
+my_survivalDataForClassification[] <- lapply(my_survivalDataForClassification, 
+                                          function(x) if(is.character(x)) as.factor(x) else x)
+
+
+# Compute the percentage of events in "yes" and "no"
+pctPerEvent_1 <- my_survivalDataForClassification_1 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+pctPerEvent_5 <- my_survivalDataForClassification_5 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+pctPerEvent_10 <- my_survivalDataForClassification_10 %>%
+  group_by(event) %>%
+  dplyr::summarize(numPerEvent = n()) %>%
+  mutate(total = sum(numPerEvent)) %>%
+  mutate(percentage = numPerEvent / total) %>%
+  dplyr::select(event, percentage)
+
+kable(pctPerEvent_1) # View these percentages
+kable(pctPerEvent_5) # View these percentages
+kable(pctPerEvent_10) # View these percentages
+```
